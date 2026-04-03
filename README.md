@@ -2,7 +2,7 @@
 
 You are building **PawPal+**, a Streamlit app that helps a pet owner plan care tasks for their pet.
 
-<a href="/course_images/ai110/pawpal_demo.png" target="_blank"><img src='/course_images/ai110/pawpal_demo.png' title='PawPal App' width='' alt='PawPal App' class='center-block' /></a>.
+<img src='pawpal_demo.png' title='PawPal App' width='' alt='PawPal App' />
 
 ## Scenario
 
