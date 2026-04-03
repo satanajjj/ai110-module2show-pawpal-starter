@@ -25,7 +25,7 @@ class Pet:
 
     def has_need(self, need: str) -> bool:
         """Return True if the given special need is in the pet's special_needs list."""
-        pass
+        return need in self.special_needs
 
 
 @dataclass
@@ -37,11 +37,11 @@ class Owner:
 
     def get_time_budget(self) -> int:
         """Return the owner's total available minutes per day."""
-        pass
+        return self.available_minutes_per_day
 
     def prefers_time(self, slot: str) -> bool:
         """Return True if the given time slot matches the owner's preferred times."""
-        pass
+        return slot in self.preferred_times
 
 
 @dataclass
@@ -98,15 +98,16 @@ class Task:
 
     def is_high_priority(self) -> bool:
         """Return True if priority is 4 or higher."""
-        pass
+        return self.priority >= 4
 
     def fits_in(self, remaining_minutes: int) -> bool:
         """Return True if this task's duration fits within the remaining time budget."""
-        pass
+        return self.duration_minutes <= remaining_minutes
 
     def __repr__(self) -> str:
         """Return a human-readable string describing the task."""
-        pass
+        status = "done" if self.completed else "pending"
+        return f"[{self.task_id}] {self.name} ({self.category}, {self.duration_minutes}min, priority={self.priority}, {status})"
 
 
 class Scheduler:
@@ -182,7 +183,30 @@ class Scheduler:
 
     def _explain_reasoning(self, included: list[Task], skipped: list[Task]) -> str:
         """Build and return a human-readable explanation of why tasks were included or skipped."""
-        pass
+        lines = [f"Scheduled {len(included)} task(s), skipped {len(skipped)}."]
+        for task in included:
+            lines.append(f"  + {task.name} (priority={task.priority}, {task.duration_minutes}min)")
+        for task in skipped:
+            lines.append(f"  - {task.name} skipped: exceeds remaining time budget")
+        return "\n".join(lines)
+
+    def detect_conflicts(self) -> list[tuple[Task, Task]]:
+        """Return pairs of scheduled tasks whose time windows overlap.
+
+        A conflict exists when two tasks share the same preferred_time slot and
+        their HH:MM start times plus durations overlap.
+        """
+        conflicts = []
+        tasks = [t for t in self.tasks if not t.completed]
+        for i, a in enumerate(tasks):
+            for b in tasks[i + 1:]:
+                a_start = sum(int(x) * m for x, m in zip(a.start_time.split(":"), (60, 1)))
+                b_start = sum(int(x) * m for x, m in zip(b.start_time.split(":"), (60, 1)))
+                a_end = a_start + a.duration_minutes
+                b_end = b_start + b.duration_minutes
+                if a_start < b_end and b_start < a_end:
+                    conflicts.append((a, b))
+        return conflicts
 
 
 @dataclass
@@ -200,7 +224,14 @@ class DailyPlan:
 
     def summary(self) -> str:
         """Return a formatted overview of the plan suitable for display in the UI."""
-        pass
+        lines = [
+            f"Plan for {self.pet_name}",
+            f"  Total scheduled: {self.total_duration_minutes} min across {len(self.scheduled_tasks)} task(s)",
+        ]
+        if self.skipped_tasks:
+            lines.append(f"  Skipped: {', '.join(t.name for t in self.skipped_tasks)}")
+        lines.append(f"  Reasoning:\n{self.reasoning}")
+        return "\n".join(lines)
 
     def get_tasks_by_time(self, slot: str) -> list[Task]:
         """Return scheduled tasks that match the given time slot."""
