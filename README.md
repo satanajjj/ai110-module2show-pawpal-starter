@@ -41,3 +41,18 @@ pip install -r requirements.txt
 5. Add tests to verify key behaviors.
 6. Connect your logic to the Streamlit UI in `app.py`.
 7. Refine UML so it matches what you actually built.
+
+## Testing PawPal+
+
+Run: `python -m pytest`
+
+This test suite covers:
+
+- Task recurrence and next occurrence logic (`daily`/`weekly`/one-time)
+- Scheduler sorting by priority and duration
+- Time-slot assignment order (morning → afternoon → evening → any)
+- Budget filtering (including and skipping tasks correctly)
+- Conflict detection for overlapping task time windows
+- `DailyPlan` task filtering and duration aggregation
+
+Confidence Level: ⭐⭐⭐⭐⭐ (5/5) based on successful test suite execution.
