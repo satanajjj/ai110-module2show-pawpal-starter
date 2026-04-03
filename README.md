@@ -2,6 +2,8 @@
 
 You are building **PawPal+**, a Streamlit app that helps a pet owner plan care tasks for their pet.
 
+<a href="/course_images/ai110/pawpal_demo.png" target="_blank"><img src='/course_images/ai110/pawpal_demo.png' title='PawPal App' width='' alt='PawPal App' class='center-block' /></a>.
+
 ## Scenario
 
 A busy pet owner needs help staying consistent with pet care. They want an assistant that can:
@@ -11,6 +13,17 @@ A busy pet owner needs help staying consistent with pet care. They want an assis
 - Produce a daily plan and explain why it chose that plan
 
 Your job is to design the system first (UML), then implement the logic in Python, then connect it to the Streamlit UI.
+
+## Features
+
+- Priority-first task sorting (high → low, duration tie-break)
+- Time-slot assignment with ordered slots: `morning`, `afternoon`, `evening`, `any`
+- Schedule generation includes budget filtering (greedy inclusion then skipped tasks)
+- Conflict detection for overlapping task time windows (`start_time` + duration)
+- Recurring task support (`daily`, `weekly`) with `next_occurrence()` rollout
+- Senior age check per species (`dog`, `cat`, `rabbit`, default other)
+- Reasoning output describing included/skipped tasks and total scheduled minutes
+
 
 ## What you will build
 
@@ -56,3 +69,4 @@ This test suite covers:
 - `DailyPlan` task filtering and duration aggregation
 
 Confidence Level: ⭐⭐⭐⭐⭐ (5/5) based on successful test suite execution.
+

@@ -12,6 +12,12 @@ if "owner" not in st.session_state:
 if "pet" not in st.session_state:
     st.session_state.pet = None
 
+if "scheduler" not in st.session_state:
+    st.session_state.scheduler = None
+
+if "plan" not in st.session_state:
+    st.session_state.plan = None
+
 # ------------------------------------------------------------------ #
 # SECTION 1 — Owner setup
 # ------------------------------------------------------------------ #
@@ -52,7 +58,8 @@ if st.button("Save Pet"):
         breed=breed,
         age_years=float(age),
     )
-    st.success(f"Pet '{pet_name}' saved. Senior: {st.session_state.pet.is_senior()}")
+    senior_label = "Senior pet" if st.session_state.pet.is_senior() else "Not yet senior"
+    st.success(f"Pet '{pet_name}' saved — {senior_label}.")
 
 st.divider()
 
@@ -117,24 +124,34 @@ if st.button("Generate Schedule"):
     elif not st.session_state.pet.tasks:
         st.warning("Add at least one task before generating a schedule.")
     else:
-        scheduler = Scheduler(
+        st.session_state.scheduler = Scheduler(
             owner=st.session_state.owner,
             pet=st.session_state.pet,
             tasks=st.session_state.pet.tasks,
         )
-        plan = scheduler.generate_plan()
+        st.session_state.plan = st.session_state.scheduler.generate_plan()
 
-        st.success(f"Schedule for **{plan.pet_name}** — {plan.total_duration_minutes} min total")
+if st.session_state.plan is not None:
+    plan = st.session_state.plan
+    scheduler = st.session_state.scheduler
 
-        for slot in ("morning", "afternoon", "evening", "any"):
-            slot_tasks = [t for t in plan.scheduled_tasks if t.preferred_time == slot]
-            if slot_tasks:
-                st.markdown(f"**{slot.capitalize()}**")
-                for t in slot_tasks:
-                    st.markdown(f"- {t.name} ({t.duration_minutes} min, priority {t.priority})")
+    st.success(f"Schedule for **{plan.pet_name}** — {plan.total_duration_minutes} min total")
 
-        if plan.skipped_tasks:
-            st.warning("Skipped (over budget): " + ", ".join(t.name for t in plan.skipped_tasks))
+    for slot in ("morning", "afternoon", "evening", "any"):
+        slot_tasks = scheduler.sort_by_time(plan.get_tasks_by_time(slot))
+        if slot_tasks:
+            st.markdown(f"**{slot.capitalize()}**")
+            for t in slot_tasks:
+                st.markdown(f"- {t.name} ({t.duration_minutes} min, priority {t.priority}, starts {t.start_time})")
 
-        if plan.reasoning:
-            st.info(plan.reasoning)
+    conflicts = scheduler.detect_conflicts()
+    if conflicts:
+        st.error("⚠️ Scheduling conflicts detected:")
+        for a, b in conflicts:
+            st.markdown(f"- **{a.name}** and **{b.name}** overlap (starts {a.start_time} and {b.start_time})")
+
+    if plan.skipped_tasks:
+        st.warning("Skipped (over budget): " + ", ".join(t.name for t in plan.skipped_tasks))
+
+    if plan.reasoning:
+        st.info(plan.reasoning)

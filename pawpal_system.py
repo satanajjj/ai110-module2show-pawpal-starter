@@ -166,9 +166,23 @@ class Scheduler:
                 skipped.append(task)
         return included, skipped
 
+    _SLOT_BASE_MINUTES = {"morning": 7 * 60, "afternoon": 13 * 60, "evening": 18 * 60, "any": 9 * 60}
+
     def _assign_time_slots(self, tasks: list[Task]) -> list[Task]:
-        """Order tasks by time slot (morning → afternoon → evening → any), preserving priority within each slot."""
-        return sorted(tasks, key=lambda t: (self._SLOT_ORDER.get(t.preferred_time, 3), -t.priority))
+        """Order tasks by time slot (morning → afternoon → evening → any), preserving priority within each slot.
+
+        For tasks whose start_time is still the default '00:00', assign sequential
+        start times within each slot starting from the slot's base time.
+        """
+        ordered = sorted(tasks, key=lambda t: (self._SLOT_ORDER.get(t.preferred_time, 3), -t.priority))
+        slot_cursor: dict[str, int] = {}
+        for task in ordered:
+            if task.start_time == "00:00":
+                base = self._SLOT_BASE_MINUTES.get(task.preferred_time, 9 * 60)
+                cursor = slot_cursor.get(task.preferred_time, base)
+                task.start_time = f"{cursor // 60:02d}:{cursor % 60:02d}"
+                slot_cursor[task.preferred_time] = cursor + task.duration_minutes
+        return ordered
 
     def complete_task(self, task: Task) -> Task | None:
         """Mark a task complete and, if it recurs, add the next occurrence to this scheduler.
