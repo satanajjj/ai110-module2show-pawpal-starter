@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from datetime import date, timedelta
 
 
 @dataclass
@@ -51,13 +52,49 @@ class Task:
     duration_minutes: int
     priority: int          # 1 (low) to 5 (critical)
     preferred_time: str = "any"   # morning / afternoon / evening / any
+    start_time: str = "00:00"     # scheduled start time in "HH:MM" format
     is_recurring: bool = True
+    recurrence: str | None = None  # "daily", "weekly", or None for one-time tasks
+    due_date: date = field(default_factory=date.today)
     notes: str = ""
     completed: bool = False
 
-    def mark_complete(self) -> None:
-        """Mark this task as completed."""
+    def mark_complete(self) -> "Task | None":
+        """Mark this task as completed and return the next occurrence, if any.
+
+        Returns:
+            A new Task scheduled for the next due date if this task recurs,
+            or None if it is a one-time task.
+        """
         self.completed = True
+        return self.next_occurrence()
+
+    def next_occurrence(self) -> "Task | None":
+        """Return a fresh, incomplete copy of this task due on the next recurrence date.
+
+        Uses timedelta to advance the due_date:
+          - "daily"  → due_date + 1 day
+          - "weekly" → due_date + 7 days
+          - None     → returns None (task does not repeat)
+        """
+        _RECURRENCE_DAYS = {"daily": 1, "weekly": 7}
+        days = _RECURRENCE_DAYS.get(self.recurrence)
+        if days is None:
+            return None
+        return Task(
+            task_id=f"{self.task_id}_next",
+            name=self.name,
+            category=self.category,
+            duration_minutes=self.duration_minutes,
+            priority=self.priority,
+            preferred_time=self.preferred_time,
+            start_time=self.start_time,
+            is_recurring=self.is_recurring,
+            recurrence=self.recurrence,
+            due_date=self.due_date + timedelta(days=days),
+            notes=self.notes,
+            completed=False,
+        )
 
     def is_high_priority(self) -> bool:
         """Return True if priority is 4 or higher."""
@@ -105,6 +142,17 @@ class Scheduler:
         # Fix 3: secondary sort on duration so tie-breaking is deterministic
         return sorted(tasks, key=lambda t: (-t.priority, t.duration_minutes))
 
+    def sort_by_time(self, tasks: list[Task]) -> list[Task]:
+        """Return tasks sorted by start_time in ascending order.
+
+        Uses a lambda that converts each task's 'HH:MM' start_time string into
+        a comparable tuple of ints (hours, minutes), so '08:30' < '13:00'.
+        """
+        return sorted(
+            tasks,
+            key=lambda t: tuple(int(part) for part in t.start_time.split(":")),
+        )
+
     def _filter_by_budget(self, tasks: list[Task], budget: int) -> tuple[list[Task], list[Task]]:
         """Greedily include tasks that fit within the budget; return (included, skipped)."""
         included, skipped = [], []
@@ -120,6 +168,17 @@ class Scheduler:
     def _assign_time_slots(self, tasks: list[Task]) -> list[Task]:
         """Order tasks by time slot (morning → afternoon → evening → any), preserving priority within each slot."""
         return sorted(tasks, key=lambda t: (self._SLOT_ORDER.get(t.preferred_time, 3), -t.priority))
+
+    def complete_task(self, task: Task) -> Task | None:
+        """Mark a task complete and, if it recurs, add the next occurrence to this scheduler.
+
+        Returns the newly created next Task, or None for one-time tasks.
+        """
+        next_task = task.mark_complete()
+        if next_task is not None:
+            self.tasks.append(next_task)
+            self.pet.add_task(next_task)
+        return next_task
 
     def _explain_reasoning(self, included: list[Task], skipped: list[Task]) -> str:
         """Build and return a human-readable explanation of why tasks were included or skipped."""
@@ -145,4 +204,30 @@ class DailyPlan:
 
     def get_tasks_by_time(self, slot: str) -> list[Task]:
         """Return scheduled tasks that match the given time slot."""
-        pass
+        return [t for t in self.scheduled_tasks if t.preferred_time == slot]
+
+    def filter_tasks(
+        self,
+        *,
+        completed: bool | None = None,
+        pet_name: str | None = None,
+    ) -> list[Task]:
+        """Return scheduled tasks filtered by completion status and/or pet name.
+
+        Args:
+            completed: If True, return only completed tasks. If False, return
+                       only incomplete tasks. If None, skip this filter.
+            pet_name:  If provided, return only tasks belonging to that pet.
+                       If None, skip this filter.
+
+        Examples:
+            plan.filter_tasks(completed=False)              # all pending tasks
+            plan.filter_tasks(pet_name="Mochi")             # all of Mochi's tasks
+            plan.filter_tasks(completed=True, pet_name="Mochi")  # Mochi's done tasks
+        """
+        tasks = self.scheduled_tasks
+        if completed is not None:
+            tasks = [t for t in tasks if t.completed == completed]
+        if pet_name is not None:
+            tasks = [t for t in tasks if self.pet_name.lower() == pet_name.lower()]
+        return tasks
