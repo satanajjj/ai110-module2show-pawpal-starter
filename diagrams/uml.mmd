@@ -1,0 +1,59 @@
+
+classDiagram
+    direction TB
+
+    class Owner {
+        +str name
+        +int available_minutes
+        +list~str~ preferred_time_slots
+        +str notes
+        +get_time_budget() int
+        +prefers_time_slot(slot: str) bool
+    }
+
+    class Pet {
+        +str name
+        +str species
+        +str breed
+        +int age
+        +list~str~ special_needs
+        +is_senior() bool
+        +has_need(need: str) bool
+    }
+
+    class Task {
+        +str name
+        +str category
+        +int duration
+        +int priority
+        +str preferred_time
+        +bool recurring
+        +is_high_priority() bool
+        +fits_in(minutes: int) bool
+    }
+
+    class Scheduler {
+        +Owner owner
+        +Pet pet
+        +list~Task~ tasks
+        +generate_plan() DailyPlan
+        -sort_by_priority() list~Task~
+        -filter_by_budget(tasks: list~Task~) list~Task~
+        -assign_time_slots(tasks: list~Task~) list~Task~
+        -generate_explanation(plan: DailyPlan) str
+    }
+
+    class DailyPlan {
+        +list~Task~ scheduled_tasks
+        +list~Task~ skipped_tasks
+        +int total_duration
+        +str reasoning
+        +summary() str
+        +get_tasks_by_time(slot: str) list~Task~
+    }
+
+    Scheduler --> Owner : uses
+    Scheduler --> Pet : uses
+    Scheduler --> Task : schedules
+    Scheduler --> DailyPlan : generates
+    DailyPlan o-- Task : contains
