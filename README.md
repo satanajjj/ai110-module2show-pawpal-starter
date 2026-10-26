@@ -103,6 +103,9 @@ Tasks were organized by priority and duration. Completed tasks were excluded, an
 ```
 # Paste your pytest output here
 ```
+tests/test_pawpal.py ..                                                [100%]
+
+============================= 2 passed in 0.06s ==============================
 
 ## 📐 Smarter Scheduling
 
@@ -126,3 +129,19 @@ Describe your app in numbered steps so a reader can follow along without watchin
 5. <!-- Add more steps as needed -->
 
 **Screenshot or video** *(optional)*: <!-- Insert a screenshot or link to a demo video here -->
+
+## Implementation Summary
+
+PawPal+ is a Python-based pet care scheduling system that helps owners organize daily activities for multiple pets. The application uses Python dataclasses to manage pet information and tasks, along with a scheduling algorithm that considers task priorities and available time.
+
+The system consists of five main classes:
+
+- **Task:** Stores care activities, including duration, priority, frequency, and completion status.
+- **Pet:** Stores pet information and manages its assigned tasks.
+- **Owner:** Manages multiple pets and collects their tasks using `get_all_tasks()`.
+- **Scheduler:** Retrieves tasks from the Owner, sorts them by priority, and generates a daily schedule within the available time.
+- **DailyPlan:** Stores scheduled and skipped tasks, total duration, and an explanation of scheduling decisions.
+
+These classes work together to create an organized daily care plan. The Owner provides access to all pets and their tasks, while the Scheduler processes this information and produces a DailyPlan.
+
+The implementation also includes a terminal demonstration in `main.py` and automated tests using pytest to verify task completion and task addition.
